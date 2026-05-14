@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: geotrack_db
+    environment:
+      POSTGRES_DB: geotrack_db
+      POSTGRES_USER: larissa
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+
+  backend:
+    build: ./backend
+    container_name: geotrack_backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  simulador:
+    build: ./backend
+    container_name: geotrack_simulador
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - backend
+    command: python manage.py run_simulation
+    tty: true
+    stdin_open: true
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: geotrack_frontend
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

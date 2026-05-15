@@ -13,8 +13,7 @@ O projeto é totalmente conteinerizado com **Docker**. Certifique-se de ter o Do
     ```
 2.  **Configure o Ambiente:**
     * Renomeie o arquivo `.env.example` para `.env`.
-    * As configurações padrão já estão otimizadas para o ambiente Docker.
-    * Insira seu nome de usuário e senha para o banco. Opcionalmente, você pode adicionar uma chave secreta.
+    * O sistema já vem configurado com credenciais seguras para desenvolvimento local no .env.example. Basta renomear o arquivo para .env para que o Docker e o Django se comuniquem automaticamente.
 3.  **Suba os Containers:**
     ```bash
     docker-compose up -d --build
@@ -50,6 +49,7 @@ O projeto é totalmente conteinerizado com **Docker**. Certifique-se de ter o Do
 * **Por que PostGIS?** Diferente de bancos relacionais comuns, o PostGIS permite cálculos de distância e interseção geográfica diretamente via SQL, garantindo performance superior em consultas de raio.
 * **Por que separar em classes:** Isso desacopla a regra de negócio da infraestrutura. Se amanhã mudarmos do Open-Meteo para o AccuWeather, basta alterar uma classe sem tocar no restante do sistema.
 * **DRF & Spectacular:** Utilizado para criar uma API robusta com documentação automática seguindo o padrão OpenAPI 3.0, facilitando a integração com o frontend e testes manuais.
+* **Arquitetura de Micro-serviços**: O simulador foi separado em um processo de background isolado (Worker Pattern). Isso garante que o processamento pesado de cálculos geográficos e chamadas de API externas não onere a thread principal da API REST, mantendo o sistema responsivo mesmo com o aumento da frota.
 
 ### **Resiliência: Circuit Breaker Pattern**
 * **Por que implementar?** Implementei um **Circuit Breaker** manual que interrompe as requisições após 3 falhas consecutivas, protegendo o sistema de travamentos por timeout e garantindo que o cadastro de veículos e a simulação continuem funcionando mesmo com o serviço de clima offline. A implementação do Circuit Breaker foi feita de forma estatística (usando atributos de classe).

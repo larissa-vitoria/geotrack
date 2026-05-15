@@ -14,15 +14,11 @@ O projeto é totalmente conteinerizado com **Docker**. Certifique-se de ter o Do
 2.  **Configure o Ambiente:**
     * Renomeie o arquivo `.env.example` para `.env`.
     * O sistema já vem configurado com credenciais seguras para desenvolvimento local no .env.example. Basta renomear o arquivo para .env para que o Docker e o Django se comuniquem automaticamente.
-3.  **Suba os Containers:**
+3.  **Suba a aplicação e popule o banco:**
     ```bash
-    docker-compose up -d --build
+    docker-compose up --build
     ```
-4.  **Popule o Banco de Dados (Seed):**
-    ```bash
-    docker exec -it geotrack_backend python manage.py seed_carros
-    ```
-5.  **Acesse as Interfaces:**
+4.  **Acesse as Interfaces:**
     * **Frontend (Dashboard):** [http://localhost:5173](http://localhost:5173)
     * **API Documentation (Swagger):** [http://localhost:8000/api/docs/](http://localhost:8000/api/docs/)
 

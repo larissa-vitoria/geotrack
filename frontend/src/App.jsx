@@ -8,10 +8,23 @@ import {
   Circle,
   useMap,
 } from "react-leaflet";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import axios from "axios";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import { useRef } from "react";
 
 const BlueIcon = L.icon({
   iconUrl:
@@ -52,6 +65,7 @@ function App() {
   const [filtroCentro, setFiltroCentro] = useState(null);
   const [raioFiltro, setRaioFiltro] = useState(100);
   const [statusFiltro, setStatusFiltro] = useState("");
+  const [showDash, setShowDash] = useState(false);
   const [mapConfig, setMapConfig] = useState({
     center: [-27.2423, -50.2188],
     zoom: 7,
@@ -62,6 +76,8 @@ function App() {
     latitude: -27.59,
     longitude: -48.54,
   });
+  const markerRefs = useRef({});
+  const mapRef = useRef(null);
 
   const fetchCarros = useCallback(
     async (lat = "", lon = "", raio = raioFiltro, status = statusFiltro) => {
@@ -104,11 +120,9 @@ function App() {
     let isMounted = true;
     const loadData = async () => {
       if (isMounted) {
-        if (filtroCentro) {
-          await fetchCarros(filtroCentro[0], filtroCentro[1]);
-        } else {
-          await fetchCarros();
-        }
+        filtroCentro
+          ? await fetchCarros(filtroCentro[0], filtroCentro[1])
+          : await fetchCarros();
       }
     };
     loadData();
@@ -123,19 +137,17 @@ function App() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (editandoId) {
-        await axios.patch(
-          `http://localhost:8000/api/carros/${editandoId}/`,
-          form,
-        );
-      } else {
-        await axios.post("http://localhost:8000/api/carros/", form);
-      }
+      editandoId
+        ? await axios.patch(
+            `http://localhost:8000/api/carros/${editandoId}/`,
+            form,
+          )
+        : await axios.post("http://localhost:8000/api/carros/", form);
       setForm({ placa: "", modelo: "", latitude: -27.59, longitude: -48.54 });
       setEditandoId(null);
       fetchCarros();
     } catch (error) {
-      alert(error.message);
+      alert("Erro ao salvar");
     } finally {
       setLoading(false);
     }
@@ -164,13 +176,19 @@ function App() {
     total: carros.length,
   };
 
+  const dataPizza = [
+    { name: "Ativos", value: totais.ativos },
+    { name: "Problema", value: totais.problema },
+  ];
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        fontFamily: "sans-serif",
+        fontFamily: "'Inter', sans-serif",
+        background: "#f5f7fb",
       }}
     >
       <div style={dashStyle}>
@@ -181,48 +199,233 @@ function App() {
           <strong>Ativos:</strong> {totais.ativos}
         </div>
         <div style={{ ...cardStyle, color: "red" }}>
-          <strong>Com Problema:</strong> {totais.problema}
+          <strong>Problema:</strong> {totais.problema}
         </div>
+        <button
+          onClick={() => setShowDash(true)}
+          style={{
+            ...btnStyle,
+            width: "auto",
+            marginBottom: 0,
+            padding: "5px 15px",
+          }}
+        >
+          Ver Dashboard
+        </button>
       </div>
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div
+        style={{
+          display: "flex",
+          flex: 1,
+          overflow: "hidden",
+          minHeight: 0,
+        }}
+      >
         <div style={sidebarStyle}>
           <div
             style={{
-              marginBottom: "20px",
-              borderBottom: "1px solid #eee",
-              paddingBottom: "10px",
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "16px",
+              padding: "16px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             }}
           >
-            <label style={{ fontSize: "0.8rem" }}>Raio de Busca (km):</label>
-            <input
-              type="number"
-              style={inputStyle}
-              value={raioFiltro}
-              onChange={(e) => setRaioFiltro(e.target.value)}
-            />
-            <label style={{ fontSize: "0.8rem" }}>Filtrar Status:</label>
-            <select
-              style={inputStyle}
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value)}
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "flex-end",
+                marginBottom: "10px",
+              }}
             >
-              <option value="">Todos</option>
-              <option value="funcionando">Funcionando</option>
-              <option value="problema">Problema</option>
-            </select>
+              <div style={{ flex: 1 }}>
+                <label
+                  style={{
+                    fontSize: "0.9rem",
+                    fontWeight: "bold",
+                    display: "block",
+                    marginBottom: "4px",
+                    color: "#5e5a5a",
+                  }}
+                >
+                  Raio (KM)
+                </label>
+
+                <input
+                  type="number"
+                  style={{
+                    ...inputStyle,
+                    marginBottom: 0,
+                  }}
+                  value={raioFiltro}
+                  onChange={(e) => setRaioFiltro(e.target.value)}
+                />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <label
+                  style={{
+                    fontSize: "0.9rem",
+                    fontWeight: "bold",
+                    display: "block",
+                    marginBottom: "4px",
+                    color: "#5e5a5a",
+                  }}
+                >
+                  Status
+                </label>
+
+                <select
+                  style={{
+                    ...inputStyle,
+                    marginBottom: 0,
+                  }}
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value="funcionando">Funcionando</option>
+                  <option value="problema">Problema</option>
+                </select>
+              </div>
+            </div>
             {filtroCentro && (
               <button
                 onClick={limparFiltro}
                 style={{ ...btnStyle, background: "#dc3545" }}
               >
-                ✖ Limpar Filtros
+                Limpar Filtros de Área
               </button>
             )}
+
+            <div
+              style={{
+                maxHeight: "120px",
+                overflowY: "auto",
+                border: "1px solid #eee",
+                borderRadius: "6px",
+              }}
+            >
+              <table
+                style={{
+                  width: "100%",
+                  fontSize: "0.7rem",
+                  borderCollapse: "collapse",
+                  textAlign: "center",
+                  color: "#5e5a5a",
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      background: "#eee",
+                    }}
+                  >
+                    <th style={{ padding: "5px" }}>Placa</th>
+                    <th style={{ padding: "5px" }}>Modelo</th>
+                    <th style={{ padding: "5px" }}>Ações</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {carros.map((c) => (
+                    <tr
+                      key={c.id}
+                      style={{
+                        borderBottom: "1px solid #eee",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => {
+                        const marker = markerRefs.current[c.id];
+
+                        if (marker) {
+                          marker.openPopup();
+
+                          mapRef.current.flyTo(
+                            [c.lat_display, c.lon_display],
+                            10,
+                          );
+                        }
+                      }}
+                    >
+                      <td style={{ padding: "5px" }}>{c.placa}</td>
+
+                      <td style={{ padding: "5px" }}>{c.modelo}</td>
+
+                      <td style={{ padding: "5px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              prepararEdicao(c);
+                            }}
+                            style={{
+                              border: "none",
+                              background: "#dbeafe",
+                              color: "#2563eb",
+                              borderRadius: "8px",
+                              width: "28px",
+                              height: "28px",
+                              cursor: "pointer",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            ✎
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteCarro(c.id);
+                            }}
+                            style={{
+                              border: "none",
+                              background: "#fee2e2",
+                              color: "#dc2626",
+                              borderRadius: "8px",
+                              width: "28px",
+                              height: "28px",
+                              cursor: "pointer",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <h4>{editandoId ? "Editar Veículo" : "Novo Veículo"}</h4>
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "16px",
+              padding: "16px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            }}
+          >
+            <h4
+              style={{
+                margin: "0 0 10px 0",
+                color: "#5e5a5a",
+              }}
+            >
+              {editandoId ? "Editar Veículo" : "Novo Veículo"}
+            </h4>
             <input
               style={inputStyle}
               placeholder="Placa"
@@ -242,11 +445,16 @@ function App() {
               onClick={() => setSelecionandoLocal(!selecionandoLocal)}
               style={{
                 ...btnStyle,
-                background: selecionandoLocal ? "#ffc107" : "#6c757d",
-                color: "#000",
+                background: selecionandoLocal ? "#ffc107" : "transparent",
+                border: "3px solid #003f7a",
+                borderRadius: "16px",
+                color: "#064272",
+                marginTop: "15px",
               }}
             >
-              {selecionandoLocal ? "Clique no mapa..." : "📍 Selecionar Local"}
+              {selecionandoLocal
+                ? "Clique no mapa..."
+                : "Selecionar local no mapa"}
             </button>
             <input
               style={inputStyle}
@@ -269,23 +477,6 @@ function App() {
             <button type="submit" style={btnStyle} disabled={loading}>
               {loading ? "Salvando..." : editandoId ? "Atualizar" : "Cadastrar"}
             </button>
-            {editandoId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditandoId(null);
-                  setForm({
-                    placa: "",
-                    modelo: "",
-                    latitude: -27,
-                    longitude: -48,
-                  });
-                }}
-                style={{ ...btnStyle, background: "#ccc" }}
-              >
-                Cancelar
-              </button>
-            )}
           </form>
         </div>
 
@@ -296,6 +487,9 @@ function App() {
             style={{
               height: "100%",
               cursor: selecionandoLocal ? "crosshair" : "grab",
+            }}
+            whenCreated={(mapInstance) => {
+              mapRef.current = mapInstance;
             }}
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -319,8 +513,11 @@ function App() {
                 key={carro.id}
                 position={[carro.lat_display, carro.lon_display]}
                 icon={carro.status === "problema" ? RedIcon : BlueIcon}
+                ref={(ref) => {
+                  if (ref) markerRefs.current[carro.id] = ref;
+                }}
               >
-                <Popup>
+                <Popup offset={[0, -35]}>
                   <strong>{carro.modelo}</strong> ({carro.placa})<br />
                   Status: {carro.status} <br />
                   Temp:{" "}
@@ -343,6 +540,101 @@ function App() {
           </MapContainer>
         </div>
       </div>
+
+      {showDash && (
+        <div style={modalOverlay}>
+          <div style={modalContent}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h2>Dashboard de Indicadores</h2>
+              <button
+                onClick={() => setShowDash(false)}
+                style={{ ...btnStyle, width: "auto", background: "#333" }}
+              >
+                Fechar
+              </button>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "20px",
+                height: "400px",
+                marginTop: "20px",
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  background: "#fff",
+                  padding: "10px",
+                  borderRadius: "8px",
+                }}
+              >
+                <h4
+                  style={{
+                    textAlign: "center",
+                    color: "#5e5a5a",
+                  }}
+                >
+                  Status da Frota
+                </h4>
+                <ResponsiveContainer width="100%" height="90%">
+                  <PieChart>
+                    <Pie
+                      data={dataPizza}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      <Cell fill="#4CAF50" />
+                      <Cell fill="#F44336" />
+                    </Pie>
+
+                    <Tooltip />
+
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      iconType="circle"
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  background: "#fff",
+                  padding: "10px",
+                  borderRadius: "8px",
+                }}
+              >
+                <h4
+                  style={{
+                    textAlign: "center",
+                    color: "#5e5a5a",
+                  }}
+                >
+                  Visão Geral (Quantitativo)
+                </h4>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={dataPizza}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#007bff" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -354,6 +646,7 @@ const dashStyle = {
   background: "#f8f9fa",
   borderBottom: "1px solid #ddd",
   zIndex: 1000,
+  alignItems: "center",
 };
 const cardStyle = {
   background: "white",
@@ -363,28 +656,36 @@ const cardStyle = {
   fontSize: "0.9rem",
 };
 const sidebarStyle = {
-  width: "300px",
+  width: "320px",
   padding: "20px",
-  boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
+  boxShadow: "2px 0 10px rgba(0,0,0,0.06)",
   zIndex: 1001,
-  background: "white",
+  background: "#ffffff",
+  display: "flex",
+  flexDirection: "column",
+
+  height: "100%",
   overflowY: "auto",
+
+  gap: "16px",
 };
 const inputStyle = {
   width: "100%",
-  marginBottom: "10px",
-  padding: "8px",
+  marginBottom: "8px",
+  padding: "6px",
   boxSizing: "border-box",
-  border: "1px solid #ccc",
-  borderRadius: "4px",
+  border: "2px solid #5e5a5a",
+  borderRadius: "8px",
+  color: "#5e5a5a",
+  backgroundColor: "transparent",
 };
 const btnStyle = {
   width: "100%",
-  padding: "10px",
-  background: "#007bff",
+  padding: "8px",
+  background: "#003f7a",
   color: "white",
   border: "none",
-  borderRadius: "4px",
+  borderRadius: "16px",
   cursor: "pointer",
   marginBottom: "5px",
 };
@@ -396,6 +697,25 @@ const miniBtn = {
   marginRight: "10px",
   fontSize: "0.8rem",
   color: "#007bff",
+};
+const modalOverlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  background: "rgba(0,0,0,0.7)",
+  zIndex: 2000,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+};
+const modalContent = {
+  background: "#f4f4f4",
+  padding: "30px",
+  borderRadius: "12px",
+  width: "80%",
+  maxWidth: "900px",
 };
 
 export default App;

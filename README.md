@@ -82,5 +82,3 @@ O projeto é totalmente conteinerizado com **Docker**. Certifique-se de ter o Do
 Para validar a integridade do sistema e o Circuit Breaker, rode:
 ```bash
 docker exec -it geotrack_backend python manage.py test fleet
-
-Desenvolvido por Larissa – 2026.
